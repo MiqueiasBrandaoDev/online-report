@@ -1,3 +1,11 @@
+export function getPastDate(days: number): string {
+    const d = new Date();
+    d.setDate(d.getDate() - days);
+    // Return ISO string for input value (YYYY-MM-DDTHH:mm) - truncated
+    const iso = d.toISOString();
+    return iso.slice(0, 16);
+}
+
 export function formatarDuracao(segundos: number): string {
     const minutos = Math.floor(segundos / 60);
     const segs = Math.floor(segundos % 60);
