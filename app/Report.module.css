@@ -1,0 +1,393 @@
+/* Report.module.css */
+
+.wrapper {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: #0d1117;
+  color: #e6edf3;
+  min-height: 100vh;
+  line-height: 1.5;
+  padding-bottom: 50px;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px 24px;
+}
+
+/* Header */
+.header {
+  margin-bottom: 24px;
+}
+
+.headerTop {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 8px;
+}
+
+.logo {
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, #238636 0%, #2ea043 100%);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.logo svg {
+  width: 24px;
+  height: 24px;
+  fill: white;
+}
+
+.title {
+  font-size: 28px;
+  font-weight: 600;
+  color: #e6edf3;
+  margin: 0;
+}
+
+.subtitle {
+  color: #8b949e;
+  font-size: 14px;
+  margin-left: 56px;
+  margin-bottom: 0px;
+}
+
+.periodBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  padding: 8px 16px;
+  margin-top: 16px;
+  margin-left: 56px;
+  font-size: 13px;
+}
+
+.periodBadge svg {
+  width: 16px;
+  height: 16px;
+  fill: #8b949e;
+}
+
+/* Stats Grid */
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.statCard {
+  background: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 12px;
+  padding: 24px;
+  transition: border-color 0.2s;
+}
+
+.statCard:hover {
+  border-color: #8b949e;
+}
+
+.statLabel {
+  font-size: 12px;
+  font-weight: 500;
+  color: #8b949e;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+
+.statValue {
+  font-size: 32px;
+  font-weight: 600;
+  color: #e6edf3;
+  margin-bottom: 4px;
+}
+
+.statSub {
+  font-size: 13px;
+  color: #8b949e;
+}
+
+.success {
+  color: #3fb950 !important;
+}
+
+.warning {
+  color: #d29922 !important;
+}
+
+.danger {
+  color: #f85149 !important;
+}
+
+.muted {
+  color: #8b949e !important;
+}
+
+/* Sections */
+.section {
+  background: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 12px;
+  margin-bottom: 24px;
+  overflow: hidden;
+}
+
+.sectionHeader {
+  padding: 16px 24px;
+  border-bottom: 1px solid #30363d;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.sectionHeader svg {
+  width: 20px;
+  height: 20px;
+  fill: #8b949e;
+}
+
+.sectionTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: #e6edf3;
+}
+
+.sectionContent {
+  padding: 24px;
+}
+
+/* Two columns layout */
+.twoColumns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+/* Status Grid */
+.statusGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.statusItem {
+  text-align: center;
+  padding: 20px;
+  background: #0d1117;
+  border-radius: 8px;
+}
+
+.statusValue {
+  font-size: 28px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.statusLabel {
+  font-size: 12px;
+  color: #8b949e;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Metrics List */
+.metricsList {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.metricRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: #0d1117;
+  border-radius: 8px;
+}
+
+.metricLabel {
+  font-size: 14px;
+  color: #8b949e;
+}
+
+.metricValue {
+  font-size: 14px;
+  font-weight: 600;
+  color: #e6edf3;
+}
+
+/* Table */
+.tableContainer {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table th {
+  text-align: left;
+  padding: 12px 16px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #8b949e;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid #30363d;
+}
+
+.table td {
+  padding: 16px;
+  font-size: 14px;
+  border-bottom: 1px solid #21262d;
+  color: #e6edf3;
+}
+
+.table tr:last-child td {
+  border-bottom: none;
+}
+
+.table tr:hover {
+  background: #1c2128;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.badgeSuccess {
+  background: rgba(63, 185, 80, 0.15);
+  color: #3fb950;
+}
+
+.badgePurple {
+  background: rgba(163, 113, 247, 0.15);
+  color: #a371f7;
+}
+
+/* Progress Bar */
+.progressContainer {
+  margin-top: 8px;
+}
+
+.progressBar {
+  height: 8px;
+  background: #21262d;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.green {
+  background: linear-gradient(90deg, #238636, #2ea043);
+}
+
+.blue {
+  background: linear-gradient(90deg, #1f6feb, #388bfd);
+}
+
+/* Distribution Bars */
+.distItem {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.distLabel {
+  width: 60px;
+  font-size: 13px;
+  color: #8b949e;
+  text-align: right;
+}
+
+.distBarContainer {
+  flex: 1;
+  height: 24px;
+  background: #21262d;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.distBar {
+  height: 100%;
+  background: linear-gradient(90deg, #238636, #2ea043);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  padding-left: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  color: white;
+  min-width: fit-content;
+  white-space: nowrap;
+}
+
+/* Footer */
+.footer {
+  text-align: center;
+  padding: 32px;
+  color: #8b949e;
+  font-size: 13px;
+}
+
+.footer a {
+  color: #58a6ff;
+  text-decoration: none;
+}
+
+.footer a:hover {
+  text-decoration: underline;
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+  .statsGrid {
+      grid-template-columns: repeat(2, 1fr);
+  }
+
+  .twoColumns {
+      grid-template-columns: 1fr;
+  }
+
+  .statusGrid {
+      grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  .statsGrid {
+      grid-template-columns: 1fr;
+  }
+
+  .headerTop {
+      flex-direction: column;
+      align-items: flex-start;
+  }
+
+  .subtitle, .periodBadge {
+      margin-left: 0;
+  }
+}
