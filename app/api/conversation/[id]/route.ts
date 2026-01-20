@@ -28,6 +28,11 @@ export async function GET(request: Request, { params }: { params: any }) {
             if (res.status === 404) {
                 return NextResponse.json({ error: 'Not found' }, { status: 404 });
             }
+            if (res.status === 429) {
+                console.error(`Rate limit exceeded for conversation ${conversationId}`);
+                return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 });
+            }
+            console.error(`API Error ${res.status} for conversation ${conversationId}`);
             throw new Error(`API Error ${res.status}`);
         }
 

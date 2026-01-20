@@ -50,4 +50,8 @@ export interface ReportData {
 
     // Top engagements
     picos: ProcessedSession[];
+
+    // Report metadata
+    periodo_inicio?: string;
+    gerado_em?: string;
 }
