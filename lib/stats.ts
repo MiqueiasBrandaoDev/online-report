@@ -59,14 +59,69 @@ export function calculateStats(
         const num_msgs = details?.transcript?.length || 0;
         mensagens.push(num_msgs);
 
+        // Extrai dados do cliente dos detalhes
+        let resultado_venda: "aceito" | "recusado" | null = null;
+        let telefone_cliente: string | undefined;
+        let nome_cliente: string | undefined;
+
+        if (details) {
+            // Telefone do cliente
+            telefone_cliente = details.metadata?.phone_call?.external_number
+                || details.metadata?.phone_call?.from_number;
+
+            // Dados de data_collection_results
+            const dataResults = details.analysis?.data_collection_results;
+            if (dataResults) {
+                // Busca nome do cliente
+                const nomeFields = ['customer_name', 'nome', 'nome_cliente', 'name', 'client_name'];
+                for (const field of nomeFields) {
+                    if (dataResults[field]?.value && typeof dataResults[field].value === 'string') {
+                        nome_cliente = dataResults[field].value as string;
+                        break;
+                    }
+                }
+
+                // Busca resultado da venda
+                const resultFields = ['sale_accepted', 'venda_aceita', 'result', 'accepted', 'aceitou'];
+                for (const field of resultFields) {
+                    if (dataResults[field]?.value !== undefined) {
+                        const value = dataResults[field].value;
+                        if (typeof value === 'boolean') {
+                            resultado_venda = value ? 'aceito' : 'recusado';
+                        } else if (typeof value === 'string') {
+                            const lower = value.toLowerCase();
+                            if (lower === 'true' || lower === 'sim' || lower === 'yes' || lower === 'aceito') {
+                                resultado_venda = 'aceito';
+                            } else if (lower === 'false' || lower === 'não' || lower === 'nao' || lower === 'no' || lower === 'recusado') {
+                                resultado_venda = 'recusado';
+                            }
+                        }
+                        break;
+                    }
+                }
+            }
+
+            // Também verifica dynamic_variables para nome
+            const dynVars = details.conversation_initiation_client_data?.dynamic_variables;
+            if (dynVars && !nome_cliente) {
+                if (dynVars.nome) nome_cliente = String(dynVars.nome);
+                else if (dynVars.customer_name) nome_cliente = String(dynVars.customer_name);
+                else if (dynVars.name) nome_cliente = String(dynVars.name);
+            }
+        }
+
         // Cria objeto da sessão com todos os dados
         const startTs = conv.start_time_unix_secs;
         const horario = new Date(startTs * 1000).toISOString();
         const sessao: ProcessedSession = {
+            conversation_id: conv.conversation_id,
             horario,
             duracao,
             mensagens: num_msgs,
-            status
+            status,
+            resultado_venda,
+            telefone_cliente,
+            nome_cliente
         };
 
         // Adiciona em ambos os arrays

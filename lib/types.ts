@@ -12,6 +12,22 @@ export interface ConversationDetails {
     transcript: Array<{ role: string; message: string; time_in_call_secs: number }>;
     metadata?: {
         call_duration_secs?: number;
+        phone_call?: {
+            external_number?: string;
+            to_number?: string;
+            from_number?: string;
+        };
+    };
+    analysis?: {
+        transcript_summary?: string;
+        call_successful?: string;
+        data_collection_results?: Record<string, {
+            value: string | boolean | number;
+            rationale?: string;
+        }>;
+    };
+    conversation_initiation_client_data?: {
+        dynamic_variables?: Record<string, string | number | boolean>;
     };
     duration_seconds?: number;
     status?: string;
@@ -23,6 +39,8 @@ export interface ConversationDetails {
  * Contém dados individuais de cada ligação para permitir filtragem por data
  */
 export interface ProcessedSession {
+    /** ID único da conversa na ElevenLabs (para buscar transcrição/áudio) */
+    conversation_id?: string;
     /** Data/hora da conversa em formato ISO (ex: "2024-01-15T14:30:00.000Z") */
     horario: string;
     /** Duração da conversa em segundos */
@@ -31,6 +49,12 @@ export interface ProcessedSession {
     mensagens: number;
     /** Status da conversa: bem-sucedido ou não-atendida */
     status: "bem-sucedido" | "nao-atendida";
+    /** Resultado da venda (se disponível via data_collection) */
+    resultado_venda?: "aceito" | "recusado" | null;
+    /** Telefone do cliente (se disponível) */
+    telefone_cliente?: string;
+    /** Nome do cliente (se disponível via data_collection) */
+    nome_cliente?: string;
 }
 
 /**

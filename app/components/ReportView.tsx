@@ -6,6 +6,8 @@ import { ReportData, ProcessedSession } from '@/lib/types';
 import { formatarDuracao, formatarDataHora } from '@/lib/utils';
 import AnimatedCounter from './AnimatedCounter';
 import DateRangeFilter from './DateRangeFilter';
+import Tabs, { TabType } from './Tabs';
+import TranscriptionsView from './TranscriptionsView';
 import { recalculateFromSessions } from '@/lib/stats';
 
 interface ReportViewProps {
@@ -23,7 +25,9 @@ interface ReportViewProps {
 export default function ReportView({ data, startDate }: ReportViewProps) {
     // Estado para dados filtrados (null = sem filtro ativo)
     const [filteredData, setFilteredData] = useState<ReturnType<typeof recalculateFromSessions> | null>(null);
+    const [filteredSessoes, setFilteredSessoes] = useState<ProcessedSession[] | null>(null);
     const [isFiltered, setIsFiltered] = useState(false);
+    const [activeTab, setActiveTab] = useState<TabType>('dashboard');
 
     // Verifica se o relatório tem todas as sessões ou é antigo
     const hasAllSessions = Boolean(data.sessoes && data.sessoes.length > 0);
@@ -53,17 +57,19 @@ export default function ReportView({ data, startDate }: ReportViewProps) {
     console.log('displayData.total:', displayData.total, 'filteredData:', filteredData?.total);
 
     // Handler para quando o filtro é aplicado
-    const handleFilter = (filteredSessoes: ProcessedSession[]) => {
-        console.log('Filtro aplicado - sessões filtradas:', filteredSessoes.length);
-        const recalculated = recalculateFromSessions(filteredSessoes);
+    const handleFilter = (sessoesFiltradas: ProcessedSession[]) => {
+        console.log('Filtro aplicado - sessões filtradas:', sessoesFiltradas.length);
+        const recalculated = recalculateFromSessions(sessoesFiltradas);
         console.log('Dados recalculados:', recalculated);
         setFilteredData(recalculated);
+        setFilteredSessoes(sessoesFiltradas);
         setIsFiltered(true);
     };
 
     // Handler para limpar o filtro
     const handleClearFilter = () => {
         setFilteredData(null);
+        setFilteredSessoes(null);
         setIsFiltered(false);
     };
 
@@ -75,10 +81,41 @@ export default function ReportView({ data, startDate }: ReportViewProps) {
 
     const distMax = Math.max(...Object.values(displayData.dist_msgs), 1);
 
+    // Calcula estatísticas de vendas a partir das sessões
+    // Ligações bem-sucedidas sem resultado definido são tratadas como "recusadas" por padrão
+    const sessoesParaVendas = filteredSessoes || data.sessoes || [];
+    const vendasStats = useMemo(() => {
+        // Considera apenas ligações bem-sucedidas para estatísticas de vendas
+        const sessoesBemsucedidas = sessoesParaVendas.filter(s => s.status === 'bem-sucedido');
+
+        // Aceitas: apenas as que têm resultado_venda === 'aceito'
+        const aceitas = sessoesBemsucedidas.filter(s => s.resultado_venda === 'aceito');
+
+        // Recusadas: as que têm resultado_venda === 'recusado' OU não têm resultado definido
+        const recusadas = sessoesBemsucedidas.filter(s =>
+            s.resultado_venda === 'recusado' ||
+            s.resultado_venda === null ||
+            s.resultado_venda === undefined
+        );
+
+        const totalVendas = sessoesBemsucedidas.length;
+        const totalAceitas = aceitas.length;
+        const totalRecusadas = recusadas.length;
+        const taxaConversao = totalVendas > 0 ? (totalAceitas / totalVendas * 100) : 0;
+
+        return {
+            total: totalVendas,
+            aceitas: totalAceitas,
+            recusadas: totalRecusadas,
+            taxaConversao,
+            temDados: totalVendas > 0
+        };
+    }, [sessoesParaVendas]);
+
     return (
         <div className={styles.wrapper}>
             <div className={styles.container}>
-                {/* Header with Filter */}
+                {/* Header with Tabs */}
                 <header className={styles.header}>
                     <div className={styles.headerWithFilter}>
                         <div className={styles.headerContent}>
@@ -101,218 +138,289 @@ export default function ReportView({ data, startDate }: ReportViewProps) {
                             </div>
                         </div>
 
-                        {/* Filtro de data (só aparece se tiver TODAS as sessões) */}
-                        {hasAllSessions && sessoesParaFiltro.length > 0 && (
-                            <DateRangeFilter
-                                sessoes={sessoesParaFiltro}
-                                onFilter={handleFilter}
-                                onClear={handleClearFilter}
-                            />
-                        )}
-                        {/* Aviso para relatórios antigos sem suporte a filtro */}
-                        {!hasAllSessions && sessoesParaFiltro.length > 0 && (
-                            <div className={styles.legacyWarning}>
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
-                                </svg>
-                                <span>Gere um novo relatório para usar filtros</span>
-                            </div>
-                        )}
+                        {/* Abas e Filtro de data à direita */}
+                        <div className={styles.headerRight}>
+                            <Tabs activeTab={activeTab} onTabChange={setActiveTab} />
+
+                            {hasAllSessions && sessoesParaFiltro.length > 0 && (
+                                <DateRangeFilter
+                                    sessoes={sessoesParaFiltro}
+                                    onFilter={handleFilter}
+                                    onClear={handleClearFilter}
+                                />
+                            )}
+                            {/* Aviso para relatórios antigos sem suporte a filtro */}
+                            {!hasAllSessions && sessoesParaFiltro.length > 0 && (
+                                <div className={styles.legacyWarning}>
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+                                    </svg>
+                                    <span>Gere um novo relatório para usar filtros</span>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </header>
 
-                {/* Stats Cards */}
-                <div className={styles.statsGrid}>
-                    <div className={styles.statCard}>
-                        <div className={styles.statLabel}>Total de Ligações</div>
-                        <div className={styles.statValue}>
-                            <AnimatedCounter value={displayData.total} duration={1800} />
-                        </div>
-                        <div className={styles.statSub}>registros processados</div>
-                    </div>
-                    <div className={styles.statCard}>
-                        <div className={styles.statLabel}>Taxa de Atendimento</div>
-                        <div className={styles.statValue}>
-                            <AnimatedCounter value={displayData.taxa_atendimento} duration={1600} decimals={1} suffix="%" />
-                        </div>
-                        <div className={`${styles.statSub} ${styles.success}`}>
-                            <AnimatedCounter value={displayData.ligacoes_atendidas} duration={1400} /> atendidas
-                        </div>
-                        <div className={styles.progressContainer}>
-                            <div className={styles.progressWrapper}>
-                                <span className={styles.tooltip}>{displayData.ligacoes_atendidas.toLocaleString()} de {displayData.total.toLocaleString()} ligações atendidas</span>
-                                <div className={styles.progressBar}>
-                                    <div className={`${styles.progressFill} ${styles.green}`} style={{ width: `${displayData.taxa_atendimento}%` }}></div>
+                {/* Conteúdo baseado na aba ativa */}
+                {activeTab === 'dashboard' ? (
+                    <>
+                        {/* Stats Cards */}
+                        <div className={styles.statsGrid}>
+                            <div className={styles.statCard}>
+                                <div className={styles.statLabel}>Total de Ligações</div>
+                                <div className={styles.statValue}>
+                                    <AnimatedCounter value={displayData.total} duration={1800} />
                                 </div>
+                                <div className={styles.statSub}>registros processados</div>
                             </div>
-                        </div>
-                    </div>
-                    <div className={styles.statCard}>
-                        <div className={styles.statLabel}>Ligações +30s</div>
-                        <div className={styles.statValue}>
-                            <AnimatedCounter value={displayData.ligacoes_mais_30s} duration={1600} />
-                        </div>
-                        <div className={styles.statSub}>
-                            <AnimatedCounter value={displayData.taxa_mais_30s} duration={1400} decimals={1} suffix="% do total" />
-                        </div>
-                        <div className={styles.progressContainer}>
-                            <div className={styles.progressWrapper}>
-                                <span className={styles.tooltip}>{displayData.ligacoes_mais_30s.toLocaleString()} ligações com mais de 30 segundos</span>
-                                <div className={styles.progressBar}>
-                                    <div className={`${styles.progressFill} ${styles.blue}`} style={{ width: `${displayData.taxa_mais_30s}%` }}></div>
+                            <div className={styles.statCard}>
+                                <div className={styles.statLabel}>Taxa de Atendimento</div>
+                                <div className={styles.statValue}>
+                                    <AnimatedCounter value={displayData.taxa_atendimento} duration={1600} decimals={1} suffix="%" />
                                 </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div className={styles.statCard}>
-                        <div className={styles.statLabel}>Tempo Total</div>
-                        <div className={styles.statValue}>{formatarDuracao(displayData.duracao_total)}</div>
-                        <div className={styles.statSub}>média de {formatarDuracao(displayData.duracao_media)} por ligação</div>
-                    </div>
-                </div>
-
-                {/* Status Section */}
-                <div className={styles.section}>
-                    <div className={styles.sectionHeader}>
-                        <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" /></svg>
-                        <span className={styles.sectionTitle}>Status das Ligações</span>
-                    </div>
-                    <div className={styles.sectionContent}>
-                        <div className={styles.statusGrid} style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
-                            <div className={styles.statusItem}>
-                                <div className={`${styles.statusValue} ${styles.success}`}>
-                                    <AnimatedCounter value={displayData.ligacoes_atendidas} duration={1600} />
+                                <div className={`${styles.statSub} ${styles.success}`}>
+                                    <AnimatedCounter value={displayData.ligacoes_atendidas} duration={1400} /> atendidas
                                 </div>
-                                <div className={styles.statusLabel}>Bem-sucedidas</div>
-                            </div>
-                            <div className={styles.statusItem}>
-                                <div className={`${styles.statusValue} ${styles.danger}`}>
-                                    <AnimatedCounter value={displayData.ligacoes_nao_atendidas} duration={1600} />
-                                </div>
-                                <div className={styles.statusLabel}>Não Atendidas</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Two Columns: Duration & Messages */}
-                <div className={styles.twoColumns}>
-                    <div className={styles.section}>
-                        <div className={styles.sectionHeader}>
-                            <svg viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z" /></svg>
-                            <span className={styles.sectionTitle}>Duração</span>
-                        </div>
-                        <div className={styles.sectionContent}>
-                            <div className={styles.metricsList}>
-                                <div className={styles.metricRow}>
-                                    <span className={styles.metricLabel}>Duração Total</span>
-                                    <span className={styles.metricValue}>{formatarDuracao(displayData.duracao_total)}</span>
-                                </div>
-                                <div className={styles.metricRow}>
-                                    <span className={styles.metricLabel}>Duração Média</span>
-                                    <span className={styles.metricValue}>{formatarDuracao(displayData.duracao_media)}</span>
-                                </div>
-                                <div className={styles.metricRow}>
-                                    <span className={styles.metricLabel}>Maior Duração</span>
-                                    <span className={styles.metricValue}>{formatarDuracao(displayData.maior_duracao)}</span>
-                                </div>
-                                <div className={styles.metricRow}>
-                                    <span className={styles.metricLabel}>Sessões sem duração</span>
-                                    <span className={styles.metricValue}>{displayData.sessoes_zero}</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className={styles.section}>
-                        <div className={styles.sectionHeader}>
-                            <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z" /></svg>
-                            <span className={styles.sectionTitle}>Mensagens</span>
-                        </div>
-                        <div className={styles.sectionContent}>
-                            <div className={styles.metricsList}>
-                                <div className={styles.metricRow}>
-                                    <span className={styles.metricLabel}>Total de Mensagens</span>
-                                    <span className={styles.metricValue}>{displayData.total_mensagens.toLocaleString()}</span>
-                                </div>
-                                <div className={styles.metricRow}>
-                                    <span className={styles.metricLabel}>Média por Sessão</span>
-                                    <span className={styles.metricValue}>~{displayData.media_msgs.toFixed(1)}</span>
-                                </div>
-                                <div className={styles.metricRow}>
-                                    <span className={styles.metricLabel}>Máximo em uma Sessão</span>
-                                    <span className={styles.metricValue}>{displayData.max_msgs}</span>
-                                </div>
-                                <div className={styles.metricRow}>
-                                    <span className={styles.metricLabel}>Sessões Bem-sucedidas</span>
-                                    <span className={styles.metricValue}>{displayData.sessoes_sucesso.length}</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Distribution Section */}
-                <div className={styles.section}>
-                    <div className={styles.sectionHeader}>
-                        <svg viewBox="0 0 24 24"><path d="M5 9.2h3V19H5V9.2zM10.6 5h2.8v14h-2.8V5zm5.6 8H19v6h-2.8v-6z" /></svg>
-                        <span className={styles.sectionTitle}>Distribuição de Mensagens (Sessões Bem-sucedidas)</span>
-                    </div>
-                    <div className={styles.sectionContent}>
-                        {["0", "1-2", "3-4", "5-6", "7-8", "9+"].map((faixa, index) => {
-                            const count = displayData.dist_msgs[faixa] || 0;
-                            if (count === 0) return null;
-
-                            return (
-                                <div key={faixa} className={styles.distItem}>
-                                    <span className={styles.distLabel}>{faixa} msgs</span>
-                                    <div className={styles.distBarContainer}>
-                                        <div
-                                            className={styles.distBar}
-                                            data-index={index}
-                                            style={{ width: getWidth(count, distMax) }}
-                                            title={`${count} sessões com ${faixa} mensagens`}
-                                        >
-                                            {count}
+                                <div className={styles.progressContainer}>
+                                    <div className={styles.progressWrapper}>
+                                        <span className={styles.tooltip}>{displayData.ligacoes_atendidas.toLocaleString()} de {displayData.total.toLocaleString()} ligações atendidas</span>
+                                        <div className={styles.progressBar}>
+                                            <div className={`${styles.progressFill} ${styles.green}`} style={{ width: `${displayData.taxa_atendimento}%` }}></div>
                                         </div>
                                     </div>
                                 </div>
-                            );
-                        })}
-                    </div>
-                </div>
-
-                {/* Top Engagements */}
-                <div className={styles.section}>
-                    <div className={styles.sectionHeader}>
-                        <svg viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" /></svg>
-                        <span className={styles.sectionTitle}>Picos de Engajamento (Top 5)</span>
-                    </div>
-                    <div className={styles.sectionContent}>
-                        <div className={styles.tableContainer}>
-                            <table className={styles.table}>
-                                <thead>
-                                    <tr>
-                                        <th>Horário</th>
-                                        <th>Duração</th>
-                                        <th>Mensagens</th>
-                                        <th>Status</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {displayData.picos.map((pico, idx) => (
-                                        <tr key={idx}>
-                                            <td>{formatarDataHora(pico.horario)}</td>
-                                            <td><span className={`${styles.badge} ${styles.badgePurple}`}>{formatarDuracao(pico.duracao)}</span></td>
-                                            <td><strong>{pico.mensagens}</strong> mensagens</td>
-                                            <td><span className={`${styles.badge} ${styles.badgeSuccess}`}>Bem-sucedida</span></td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
+                            </div>
+                            <div className={styles.statCard}>
+                                <div className={styles.statLabel}>Ligações +30s</div>
+                                <div className={styles.statValue}>
+                                    <AnimatedCounter value={displayData.ligacoes_mais_30s} duration={1600} />
+                                </div>
+                                <div className={styles.statSub}>
+                                    <AnimatedCounter value={displayData.taxa_mais_30s} duration={1400} decimals={1} suffix="% do total" />
+                                </div>
+                                <div className={styles.progressContainer}>
+                                    <div className={styles.progressWrapper}>
+                                        <span className={styles.tooltip}>{displayData.ligacoes_mais_30s.toLocaleString()} ligações com mais de 30 segundos</span>
+                                        <div className={styles.progressBar}>
+                                            <div className={`${styles.progressFill} ${styles.blue}`} style={{ width: `${displayData.taxa_mais_30s}%` }}></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className={styles.statCard}>
+                                <div className={styles.statLabel}>Tempo Total</div>
+                                <div className={styles.statValue}>{formatarDuracao(displayData.duracao_total)}</div>
+                                <div className={styles.statSub}>média de {formatarDuracao(displayData.duracao_media)} por ligação</div>
+                            </div>
                         </div>
-                    </div>
-                </div>
+
+                        {/* Status Section */}
+                        <div className={styles.section}>
+                            <div className={styles.sectionHeader}>
+                                <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" /></svg>
+                                <span className={styles.sectionTitle}>Status das Ligações</span>
+                            </div>
+                            <div className={styles.sectionContent}>
+                                <div className={styles.statusGrid} style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
+                                    <div className={styles.statusItem}>
+                                        <div className={`${styles.statusValue} ${styles.success}`}>
+                                            <AnimatedCounter value={displayData.ligacoes_atendidas} duration={1600} />
+                                        </div>
+                                        <div className={styles.statusLabel}>Bem-sucedidas</div>
+                                    </div>
+                                    <div className={styles.statusItem}>
+                                        <div className={`${styles.statusValue} ${styles.danger}`}>
+                                            <AnimatedCounter value={displayData.ligacoes_nao_atendidas} duration={1600} />
+                                        </div>
+                                        <div className={styles.statusLabel}>Não Atendidas</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Sales Results Section - only shows when there's data */}
+                        {vendasStats.temDados && (
+                            <div className={styles.section}>
+                                <div className={styles.sectionHeader}>
+                                    <svg viewBox="0 0 24 24"><path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z" /></svg>
+                                    <span className={styles.sectionTitle}>Resultado de Vendas</span>
+                                </div>
+                                <div className={styles.sectionContent}>
+                                    <div className={styles.salesStatsGrid}>
+                                        <div className={styles.salesStatCard}>
+                                            <div className={styles.salesStatValue}>
+                                                <AnimatedCounter value={vendasStats.total} duration={1400} />
+                                            </div>
+                                            <div className={styles.salesStatLabel}>Vendas Processadas</div>
+                                        </div>
+                                        <div className={`${styles.salesStatCard} ${styles.salesAccepted}`}>
+                                            <div className={styles.salesStatValue}>
+                                                <AnimatedCounter value={vendasStats.aceitas} duration={1400} />
+                                            </div>
+                                            <div className={styles.salesStatLabel}>Vendas Aceitas</div>
+                                        </div>
+                                        <div className={`${styles.salesStatCard} ${styles.salesRejected}`}>
+                                            <div className={styles.salesStatValue}>
+                                                <AnimatedCounter value={vendasStats.recusadas} duration={1400} />
+                                            </div>
+                                            <div className={styles.salesStatLabel}>Vendas Recusadas</div>
+                                        </div>
+                                        <div className={styles.salesStatCard}>
+                                            <div className={styles.salesStatValue}>
+                                                <AnimatedCounter value={vendasStats.taxaConversao} duration={1600} decimals={1} suffix="%" />
+                                            </div>
+                                            <div className={styles.salesStatLabel}>Taxa de Conversão</div>
+                                        </div>
+                                    </div>
+                                    <div className={styles.salesProgressContainer}>
+                                        <div className={styles.salesProgressBar}>
+                                            <div
+                                                className={styles.salesProgressAccepted}
+                                                style={{ width: `${vendasStats.taxaConversao}%` }}
+                                                title={`${vendasStats.aceitas} vendas aceitas`}
+                                            />
+                                            <div
+                                                className={styles.salesProgressRejected}
+                                                style={{ width: `${100 - vendasStats.taxaConversao}%` }}
+                                                title={`${vendasStats.recusadas} vendas recusadas`}
+                                            />
+                                        </div>
+                                        <div className={styles.salesProgressLabels}>
+                                            <span className={styles.salesLabelAccepted}>
+                                                Aceitas: {vendasStats.aceitas} ({vendasStats.taxaConversao.toFixed(1)}%)
+                                            </span>
+                                            <span className={styles.salesLabelRejected}>
+                                                Recusadas: {vendasStats.recusadas} ({(100 - vendasStats.taxaConversao).toFixed(1)}%)
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Two Columns: Duration & Messages */}
+                        <div className={styles.twoColumns}>
+                            <div className={styles.section}>
+                                <div className={styles.sectionHeader}>
+                                    <svg viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z" /></svg>
+                                    <span className={styles.sectionTitle}>Duração</span>
+                                </div>
+                                <div className={styles.sectionContent}>
+                                    <div className={styles.metricsList}>
+                                        <div className={styles.metricRow}>
+                                            <span className={styles.metricLabel}>Duração Total</span>
+                                            <span className={styles.metricValue}>{formatarDuracao(displayData.duracao_total)}</span>
+                                        </div>
+                                        <div className={styles.metricRow}>
+                                            <span className={styles.metricLabel}>Duração Média</span>
+                                            <span className={styles.metricValue}>{formatarDuracao(displayData.duracao_media)}</span>
+                                        </div>
+                                        <div className={styles.metricRow}>
+                                            <span className={styles.metricLabel}>Maior Duração</span>
+                                            <span className={styles.metricValue}>{formatarDuracao(displayData.maior_duracao)}</span>
+                                        </div>
+                                        <div className={styles.metricRow}>
+                                            <span className={styles.metricLabel}>Sessões sem duração</span>
+                                            <span className={styles.metricValue}>{displayData.sessoes_zero}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className={styles.section}>
+                                <div className={styles.sectionHeader}>
+                                    <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z" /></svg>
+                                    <span className={styles.sectionTitle}>Mensagens</span>
+                                </div>
+                                <div className={styles.sectionContent}>
+                                    <div className={styles.metricsList}>
+                                        <div className={styles.metricRow}>
+                                            <span className={styles.metricLabel}>Total de Mensagens</span>
+                                            <span className={styles.metricValue}>{displayData.total_mensagens.toLocaleString()}</span>
+                                        </div>
+                                        <div className={styles.metricRow}>
+                                            <span className={styles.metricLabel}>Média por Sessão</span>
+                                            <span className={styles.metricValue}>~{displayData.media_msgs.toFixed(1)}</span>
+                                        </div>
+                                        <div className={styles.metricRow}>
+                                            <span className={styles.metricLabel}>Máximo em uma Sessão</span>
+                                            <span className={styles.metricValue}>{displayData.max_msgs}</span>
+                                        </div>
+                                        <div className={styles.metricRow}>
+                                            <span className={styles.metricLabel}>Sessões Bem-sucedidas</span>
+                                            <span className={styles.metricValue}>{displayData.sessoes_sucesso.length}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Distribution Section */}
+                        <div className={styles.section}>
+                            <div className={styles.sectionHeader}>
+                                <svg viewBox="0 0 24 24"><path d="M5 9.2h3V19H5V9.2zM10.6 5h2.8v14h-2.8V5zm5.6 8H19v6h-2.8v-6z" /></svg>
+                                <span className={styles.sectionTitle}>Distribuição de Mensagens (Sessões Bem-sucedidas)</span>
+                            </div>
+                            <div className={styles.sectionContent}>
+                                {["0", "1-2", "3-4", "5-6", "7-8", "9+"].map((faixa, index) => {
+                                    const count = displayData.dist_msgs[faixa] || 0;
+                                    if (count === 0) return null;
+
+                                    return (
+                                        <div key={faixa} className={styles.distItem}>
+                                            <span className={styles.distLabel}>{faixa} msgs</span>
+                                            <div className={styles.distBarContainer}>
+                                                <div
+                                                    className={styles.distBar}
+                                                    data-index={index}
+                                                    style={{ width: getWidth(count, distMax) }}
+                                                    title={`${count} sessões com ${faixa} mensagens`}
+                                                >
+                                                    {count}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        {/* Top Engagements */}
+                        <div className={styles.section}>
+                            <div className={styles.sectionHeader}>
+                                <svg viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" /></svg>
+                                <span className={styles.sectionTitle}>Picos de Engajamento (Top 5)</span>
+                            </div>
+                            <div className={styles.sectionContent}>
+                                <div className={styles.tableContainer}>
+                                    <table className={styles.table}>
+                                        <thead>
+                                            <tr>
+                                                <th>Horário</th>
+                                                <th>Duração</th>
+                                                <th>Mensagens</th>
+                                                <th>Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {displayData.picos.map((pico, idx) => (
+                                                <tr key={idx}>
+                                                    <td>{formatarDataHora(pico.horario)}</td>
+                                                    <td><span className={`${styles.badge} ${styles.badgePurple}`}>{formatarDuracao(pico.duracao)}</span></td>
+                                                    <td><strong>{pico.mensagens}</strong> mensagens</td>
+                                                    <td><span className={`${styles.badge} ${styles.badgeSuccess}`}>Bem-sucedida</span></td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </>
+                ) : (
+                    <TranscriptionsView sessoes={filteredSessoes || data.sessoes || []} />
+                )}
 
                 {/* Footer */}
                 <footer className={styles.footer}>
