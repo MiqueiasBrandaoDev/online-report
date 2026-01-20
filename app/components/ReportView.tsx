@@ -1,8 +1,11 @@
+'use client';
+
 import React from 'react';
 import styles from '../Report.module.css';
 import { ReportData } from '@/lib/types';
 import { formatarDuracao, formatarDataHora } from '@/lib/utils';
 import { Spotlight } from '@/components/ui/spotlight';
+import AnimatedCounter from './AnimatedCounter';
 
 interface ReportViewProps {
     data: ReportData;
@@ -44,7 +47,9 @@ export default function ReportView({ data, startDate }: ReportViewProps) {
                             size={200}
                         />
                         <div className={styles.statLabel}>Total de Ligações</div>
-                        <div className={styles.statValue}>{data.total.toLocaleString()}</div>
+                        <div className={styles.statValue}>
+                            <AnimatedCounter value={data.total} duration={1800} />
+                        </div>
                         <div className={styles.statSub}>registros processados</div>
                     </div>
                     <div className={styles.statCard}>
@@ -53,11 +58,18 @@ export default function ReportView({ data, startDate }: ReportViewProps) {
                             size={200}
                         />
                         <div className={styles.statLabel}>Taxa de Atendimento</div>
-                        <div className={styles.statValue}>{data.taxa_atendimento.toFixed(1)}%</div>
-                        <div className={`${styles.statSub} ${styles.success}`}>{data.ligacoes_atendidas.toLocaleString()} atendidas</div>
+                        <div className={styles.statValue}>
+                            <AnimatedCounter value={data.taxa_atendimento} duration={1600} decimals={1} suffix="%" />
+                        </div>
+                        <div className={`${styles.statSub} ${styles.success}`}>
+                            <AnimatedCounter value={data.ligacoes_atendidas} duration={1400} /> atendidas
+                        </div>
                         <div className={styles.progressContainer}>
-                            <div className={styles.progressBar}>
-                                <div className={`${styles.progressFill} ${styles.green}`} style={{ width: `${data.taxa_atendimento}%` }}></div>
+                            <div className={styles.progressWrapper}>
+                                <span className={styles.tooltip}>{data.ligacoes_atendidas.toLocaleString()} de {data.total.toLocaleString()} ligações atendidas</span>
+                                <div className={styles.progressBar}>
+                                    <div className={`${styles.progressFill} ${styles.green}`} style={{ width: `${data.taxa_atendimento}%` }}></div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -67,11 +79,18 @@ export default function ReportView({ data, startDate }: ReportViewProps) {
                             size={200}
                         />
                         <div className={styles.statLabel}>Ligações +30s</div>
-                        <div className={styles.statValue}>{data.ligacoes_mais_30s.toLocaleString()}</div>
-                        <div className={styles.statSub}>{data.taxa_mais_30s.toFixed(1)}% do total</div>
+                        <div className={styles.statValue}>
+                            <AnimatedCounter value={data.ligacoes_mais_30s} duration={1600} />
+                        </div>
+                        <div className={styles.statSub}>
+                            <AnimatedCounter value={data.taxa_mais_30s} duration={1400} decimals={1} suffix="% do total" />
+                        </div>
                         <div className={styles.progressContainer}>
-                            <div className={styles.progressBar}>
-                                <div className={`${styles.progressFill} ${styles.blue}`} style={{ width: `${data.taxa_mais_30s}%` }}></div>
+                            <div className={styles.progressWrapper}>
+                                <span className={styles.tooltip}>{data.ligacoes_mais_30s.toLocaleString()} ligações com mais de 30 segundos</span>
+                                <div className={styles.progressBar}>
+                                    <div className={`${styles.progressFill} ${styles.blue}`} style={{ width: `${data.taxa_mais_30s}%` }}></div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -99,11 +118,15 @@ export default function ReportView({ data, startDate }: ReportViewProps) {
                     <div className={styles.sectionContent}>
                         <div className={styles.statusGrid} style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
                             <div className={styles.statusItem}>
-                                <div className={`${styles.statusValue} ${styles.success}`}>{data.ligacoes_atendidas.toLocaleString()}</div>
+                                <div className={`${styles.statusValue} ${styles.success}`}>
+                                    <AnimatedCounter value={data.ligacoes_atendidas} duration={1600} />
+                                </div>
                                 <div className={styles.statusLabel}>Bem-sucedidas</div>
                             </div>
                             <div className={styles.statusItem}>
-                                <div className={`${styles.statusValue} ${styles.danger}`}>{data.ligacoes_nao_atendidas.toLocaleString()}</div>
+                                <div className={`${styles.statusValue} ${styles.danger}`}>
+                                    <AnimatedCounter value={data.ligacoes_nao_atendidas} duration={1600} />
+                                </div>
                                 <div className={styles.statusLabel}>Não Atendidas</div>
                             </div>
                         </div>
@@ -186,16 +209,20 @@ export default function ReportView({ data, startDate }: ReportViewProps) {
                         <span className={styles.sectionTitle}>Distribuição de Mensagens (Sessões Bem-sucedidas)</span>
                     </div>
                     <div className={styles.sectionContent}>
-                        {["0", "1-2", "3-4", "5-6", "7-8", "9+"].map(faixa => {
+                        {["0", "1-2", "3-4", "5-6", "7-8", "9+"].map((faixa, index) => {
                             const count = data.dist_msgs[faixa] || 0;
                             if (count === 0) return null;
-                            const percent = (count / distMax) * 100;
 
                             return (
                                 <div key={faixa} className={styles.distItem}>
                                     <span className={styles.distLabel}>{faixa} msgs</span>
                                     <div className={styles.distBarContainer}>
-                                        <div className={styles.distBar} style={{ width: getWidth(count, distMax) }}>
+                                        <div
+                                            className={styles.distBar}
+                                            data-index={index}
+                                            style={{ width: getWidth(count, distMax) }}
+                                            title={`${count} sessões com ${faixa} mensagens`}
+                                        >
                                             {count}
                                         </div>
                                     </div>

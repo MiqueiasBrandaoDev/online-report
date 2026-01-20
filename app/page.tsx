@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import ReportView from './components/ReportView';
 import Login from './components/Login';
 import GenerateReportModal from './components/GenerateReportModal';
+import FaltamLigarCard from './components/FaltamLigarCard';
 import { ReportData } from '@/lib/types';
 import { checkPassword } from './actions';
 
@@ -89,6 +90,9 @@ export default function Home() {
     return (
       <div>
         <ReportView data={reportData} startDate={reportData.periodo_inicio || 'N/A'} />
+
+        {/* Card de Faltam Ligar */}
+        <FaltamLigarCard />
 
         {/* Float Action Button to generate new report */}
         <div style={{ position: 'fixed', bottom: '30px', right: '30px', zIndex: 100 }}>
