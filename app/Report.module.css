@@ -90,6 +90,8 @@
   border-radius: 12px;
   padding: 24px;
   transition: border-color 0.2s;
+  position: relative;
+  overflow: hidden;
 }
 
 .statCard:hover {
@@ -140,6 +142,7 @@
   border-radius: 12px;
   margin-bottom: 24px;
   overflow: hidden;
+  position: relative;
 }
 
 .sectionHeader {

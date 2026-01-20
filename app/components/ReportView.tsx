@@ -2,6 +2,7 @@ import React from 'react';
 import styles from '../Report.module.css';
 import { ReportData } from '@/lib/types';
 import { formatarDuracao, formatarDataHora } from '@/lib/utils';
+import { Spotlight } from '@/components/ui/spotlight';
 
 interface ReportViewProps {
     data: ReportData;
@@ -38,11 +39,19 @@ export default function ReportView({ data, startDate }: ReportViewProps) {
                 {/* Stats Cards */}
                 <div className={styles.statsGrid}>
                     <div className={styles.statCard}>
+                        <Spotlight
+                            className='from-blue-600 via-blue-500 to-blue-400 blur-3xl dark:from-blue-200 dark:via-blue-300 dark:to-blue-400'
+                            size={250}
+                        />
                         <div className={styles.statLabel}>Total de Ligações</div>
                         <div className={styles.statValue}>{data.total.toLocaleString()}</div>
                         <div className={styles.statSub}>registros processados</div>
                     </div>
                     <div className={styles.statCard}>
+                        <Spotlight
+                            className='from-green-600 via-green-500 to-green-400 blur-3xl dark:from-green-200 dark:via-green-300 dark:to-green-400'
+                            size={250}
+                        />
                         <div className={styles.statLabel}>Taxa de Atendimento</div>
                         <div className={styles.statValue}>{data.taxa_atendimento.toFixed(1)}%</div>
                         <div className={`${styles.statSub} ${styles.success}`}>{data.ligacoes_atendidas.toLocaleString()} atendidas</div>
@@ -53,6 +62,10 @@ export default function ReportView({ data, startDate }: ReportViewProps) {
                         </div>
                     </div>
                     <div className={styles.statCard}>
+                        <Spotlight
+                            className='from-purple-600 via-purple-500 to-purple-400 blur-3xl dark:from-purple-200 dark:via-purple-300 dark:to-purple-400'
+                            size={250}
+                        />
                         <div className={styles.statLabel}>Ligações +30s</div>
                         <div className={styles.statValue}>{data.ligacoes_mais_30s.toLocaleString()}</div>
                         <div className={styles.statSub}>{data.taxa_mais_30s.toFixed(1)}% do total</div>
@@ -63,6 +76,10 @@ export default function ReportView({ data, startDate }: ReportViewProps) {
                         </div>
                     </div>
                     <div className={styles.statCard}>
+                        <Spotlight
+                            className='from-cyan-600 via-cyan-500 to-cyan-400 blur-3xl dark:from-cyan-200 dark:via-cyan-300 dark:to-cyan-400'
+                            size={250}
+                        />
                         <div className={styles.statLabel}>Tempo Total</div>
                         <div className={styles.statValue}>{formatarDuracao(data.duracao_total)}</div>
                         <div className={styles.statSub}>média de {formatarDuracao(data.duracao_media)} por ligação</div>
@@ -71,6 +88,10 @@ export default function ReportView({ data, startDate }: ReportViewProps) {
 
                 {/* Status Section */}
                 <div className={styles.section}>
+                    <Spotlight
+                        className='from-emerald-600 via-emerald-500 to-emerald-400 blur-3xl dark:from-emerald-200 dark:via-emerald-300 dark:to-emerald-400'
+                        size={300}
+                    />
                     <div className={styles.sectionHeader}>
                         <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" /></svg>
                         <span className={styles.sectionTitle}>Status das Ligações</span>
@@ -92,6 +113,10 @@ export default function ReportView({ data, startDate }: ReportViewProps) {
                 {/* Two Columns: Duration & Messages */}
                 <div className={styles.twoColumns}>
                     <div className={styles.section}>
+                        <Spotlight
+                            className='from-orange-600 via-orange-500 to-orange-400 blur-3xl dark:from-orange-200 dark:via-orange-300 dark:to-orange-400'
+                            size={300}
+                        />
                         <div className={styles.sectionHeader}>
                             <svg viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z" /></svg>
                             <span className={styles.sectionTitle}>Duração</span>
@@ -119,6 +144,10 @@ export default function ReportView({ data, startDate }: ReportViewProps) {
                     </div>
 
                     <div className={styles.section}>
+                        <Spotlight
+                            className='from-pink-600 via-pink-500 to-pink-400 blur-3xl dark:from-pink-200 dark:via-pink-300 dark:to-pink-400'
+                            size={300}
+                        />
                         <div className={styles.sectionHeader}>
                             <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z" /></svg>
                             <span className={styles.sectionTitle}>Mensagens</span>
@@ -148,6 +177,10 @@ export default function ReportView({ data, startDate }: ReportViewProps) {
 
                 {/* Distribution Section */}
                 <div className={styles.section}>
+                    <Spotlight
+                        className='from-indigo-600 via-indigo-500 to-indigo-400 blur-3xl dark:from-indigo-200 dark:via-indigo-300 dark:to-indigo-400'
+                        size={300}
+                    />
                     <div className={styles.sectionHeader}>
                         <svg viewBox="0 0 24 24"><path d="M5 9.2h3V19H5V9.2zM10.6 5h2.8v14h-2.8V5zm5.6 8H19v6h-2.8v-6z" /></svg>
                         <span className={styles.sectionTitle}>Distribuição de Mensagens (Sessões Bem-sucedidas)</span>
@@ -174,6 +207,10 @@ export default function ReportView({ data, startDate }: ReportViewProps) {
 
                 {/* Top Engagements */}
                 <div className={styles.section}>
+                    <Spotlight
+                        className='from-yellow-600 via-yellow-500 to-yellow-400 blur-3xl dark:from-yellow-200 dark:via-yellow-300 dark:to-yellow-400'
+                        size={300}
+                    />
                     <div className={styles.sectionHeader}>
                         <svg viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" /></svg>
                         <span className={styles.sectionTitle}>Picos de Engajamento (Top 5)</span>
