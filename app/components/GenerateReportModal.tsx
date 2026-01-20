@@ -1,14 +1,22 @@
 'use client';
 import { useState } from 'react';
 import styles from '../Report.module.css';
+import { Loader } from '@/components/ui/loader';
 
 interface GenerateReportModalProps {
     onClose: () => void;
     onReportGenerated: (reportData: any) => void;
 }
 
+/**
+ * Modal para geração de novo relatório
+ *
+ * Permite selecionar período de início e fim para buscar ligações da API.
+ * O campo endDate é opcional - se não preenchido, busca até a data atual.
+ */
 export default function GenerateReportModal({ onClose, onReportGenerated }: GenerateReportModalProps) {
     const [startDate, setStartDate] = useState('');
+    const [endDate, setEndDate] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [progress, setProgress] = useState<{ current: number; total: number; stage: string } | null>(null);
@@ -19,21 +27,37 @@ export default function GenerateReportModal({ onClose, onReportGenerated }: Gene
             return;
         }
 
+        // Valida se endDate não é anterior a startDate
+        if (endDate && new Date(endDate) < new Date(startDate)) {
+            setError('A data de fim não pode ser anterior à data de início');
+            return;
+        }
+
         setLoading(true);
         setError(null);
         setProgress({ current: 0, total: 0, stage: 'Buscando lista de ligações...' });
 
         try {
+            // Converte datas para Unix timestamp (segundos)
             const startUnix = Math.floor(new Date(startDate).getTime() / 1000);
+            // Se endDate não fornecido, usa momento atual; senão, final do dia selecionado
+            const endUnix = endDate
+                ? Math.floor(new Date(endDate + 'T23:59:59').getTime() / 1000)
+                : Math.floor(Date.now() / 1000);
 
-            // 1. Fetch List
+            // 1. Fetch List - busca conversas a partir de startDate
             const listRes = await fetch(`/api/conversations?start=${startUnix}`);
             if (!listRes.ok) {
                 const errData = await listRes.json();
                 throw new Error(errData.error || 'Erro ao buscar lista');
             }
             const listData = await listRes.json();
-            const conversations = listData.conversations;
+
+            // Filtra conversas que estão dentro do range [startUnix, endUnix]
+            const conversations = listData.conversations.filter((conv: any) =>
+                conv.start_time_unix_secs >= startUnix &&
+                conv.start_time_unix_secs <= endUnix
+            );
 
             if (conversations.length === 0) {
                 setError('Nenhuma conversa encontrada a partir dessa data.');
@@ -80,8 +104,11 @@ export default function GenerateReportModal({ onClose, onReportGenerated }: Gene
             const { calculateStats } = await import('@/lib/stats');
             const stats = calculateStats(conversations, detailsMap);
 
-            // Add metadata to report
-            stats.periodo_inicio = new Date(startDate).toLocaleString('pt-BR');
+            // Adiciona metadados ao relatório
+            stats.periodo_inicio = new Date(startDate).toLocaleDateString('pt-BR');
+            stats.periodo_fim = endDate
+                ? new Date(endDate).toLocaleDateString('pt-BR')
+                : new Date().toLocaleDateString('pt-BR');
             stats.gerado_em = new Date().toLocaleString('pt-BR');
 
             // 4. Save report to server
@@ -115,15 +142,32 @@ export default function GenerateReportModal({ onClose, onReportGenerated }: Gene
                 <div className={styles.modalContent}>
                     {!loading ? (
                         <>
-                            <label className={styles.label}>
-                                Data de início:
-                                <input
-                                    type="date"
-                                    value={startDate}
-                                    onChange={(e) => setStartDate(e.target.value)}
-                                    className={styles.input}
-                                />
-                            </label>
+                            <div className={styles.dateInputs}>
+                                <label className={styles.label}>
+                                    Data de início:
+                                    <input
+                                        type="date"
+                                        value={startDate}
+                                        onChange={(e) => setStartDate(e.target.value)}
+                                        className={styles.input}
+                                    />
+                                </label>
+
+                                <label className={styles.label}>
+                                    Data de fim (opcional):
+                                    <input
+                                        type="date"
+                                        value={endDate}
+                                        onChange={(e) => setEndDate(e.target.value)}
+                                        className={styles.input}
+                                        min={startDate}
+                                    />
+                                </label>
+                            </div>
+
+                            <p className={styles.hint}>
+                                Se não informar a data de fim, será usado o momento atual.
+                            </p>
 
                             {error && <p className={styles.error}>{error}</p>}
 
@@ -137,14 +181,14 @@ export default function GenerateReportModal({ onClose, onReportGenerated }: Gene
                             </div>
                         </>
                     ) : (
-                        <div className={styles.progressContainer}>
-                            <p>{progress?.stage}</p>
+                        <div className={styles.loadingContainer}>
+                            <Loader text="LOADING" />
+                            <p style={{ marginTop: '16px' }}>{progress?.stage}</p>
                             {progress && progress.total > 0 && (
-                                <p>
-                                    Progresso: {progress.current} / {progress.total}
+                                <p className={styles.progressText}>
+                                    {progress.current} / {progress.total}
                                 </p>
                             )}
-                            <div className={styles.spinner}></div>
                         </div>
                     )}
                 </div>

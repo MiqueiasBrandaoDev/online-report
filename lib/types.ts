@@ -18,40 +18,96 @@ export interface ConversationDetails {
     call_successful?: string;
 }
 
+/**
+ * Sessão processada de uma conversa
+ * Contém dados individuais de cada ligação para permitir filtragem por data
+ */
 export interface ProcessedSession {
-    horario: string; // ISO date string
+    /** Data/hora da conversa em formato ISO (ex: "2024-01-15T14:30:00.000Z") */
+    horario: string;
+    /** Duração da conversa em segundos */
     duracao: number;
+    /** Número de mensagens trocadas na conversa */
     mensagens: number;
+    /** Status da conversa: bem-sucedido ou não-atendida */
+    status: "bem-sucedido" | "nao-atendida";
 }
 
+/**
+ * Dados completos do relatório de ligações
+ *
+ * Este objeto contém tanto os dados brutos (sessoes) quanto as estatísticas
+ * pré-calculadas. Os dados brutos permitem filtragem por data no dashboard.
+ *
+ * @example Filtrando por data:
+ * ```ts
+ * const filtradas = reportData.sessoes.filter(s => {
+ *   const data = new Date(s.horario);
+ *   return data >= startDate && data <= endDate;
+ * });
+ * ```
+ */
 export interface ReportData {
+    /** Total de ligações no período */
     total: number;
+    /** Contagem por status: { "bem-sucedido": N, "nao-atendida": M } */
     status_count: Record<string, number>;
+    /** Array com duração de cada ligação em segundos */
     duracoes: number[];
+    /** Array com quantidade de mensagens de cada ligação */
     mensagens: number[];
+
+    /**
+     * @deprecated Use `sessoes` que inclui todas as ligações
+     * Array apenas com sessões bem-sucedidas (mantido para compatibilidade)
+     */
     sessoes_sucesso: ProcessedSession[];
 
-    // Pre-calculated stats for easier rendering
+    /**
+     * Array com TODAS as sessões (sucesso + não atendidas)
+     * Use este campo para filtragem por data no dashboard
+     */
+    sessoes: ProcessedSession[];
+
+    // ========== Estatísticas pré-calculadas ==========
+    /** Ligações com status bem-sucedido */
     ligacoes_atendidas: number;
+    /** Ligações não atendidas */
     ligacoes_nao_atendidas: number;
+    /** Ligações com duração > 30 segundos */
     ligacoes_mais_30s: number;
+    /** Taxa de atendimento em % (0-100) */
     taxa_atendimento: number;
+    /** Taxa de ligações > 30s em % (0-100) */
     taxa_mais_30s: number;
+    /** Soma de todas as durações em segundos */
     duracao_total: number;
+    /** Média de duração em segundos */
     duracao_media: number;
+    /** Maior duração registrada em segundos */
     maior_duracao: number;
+    /** Ligações com duração zero */
     sessoes_zero: number;
+    /** Total de mensagens trocadas */
     total_mensagens: number;
+    /** Média de mensagens por ligação bem-sucedida */
     media_msgs: number;
+    /** Maior número de mensagens em uma ligação */
     max_msgs: number;
 
-    // Distributions
+    // ========== Distribuições ==========
+    /** Distribuição de mensagens: { "0": N, "1-2": M, "3-4": O, ... } */
     dist_msgs: Record<string, number>;
 
-    // Top engagements
+    // ========== Top engajamentos ==========
+    /** Top 5 ligações com mais mensagens */
     picos: ProcessedSession[];
 
-    // Report metadata
+    // ========== Metadados ==========
+    /** Data de início do período (formato local pt-BR) */
     periodo_inicio?: string;
+    /** Data de fim do período (formato local pt-BR) */
+    periodo_fim?: string;
+    /** Data/hora de geração do relatório (formato local pt-BR) */
     gerado_em?: string;
 }

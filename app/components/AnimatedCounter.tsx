@@ -20,15 +20,16 @@ export default function AnimatedCounter({
     className = ''
 }: AnimatedCounterProps) {
     const [displayValue, setDisplayValue] = useState(0);
-    const [hasAnimated, setHasAnimated] = useState(false);
+    const [isVisible, setIsVisible] = useState(false);
+    const [lastValue, setLastValue] = useState(value);
     const ref = useRef<HTMLSpanElement>(null);
 
+    // Observa visibilidade do elemento
     useEffect(() => {
         const observer = new IntersectionObserver(
             (entries) => {
-                if (entries[0].isIntersecting && !hasAnimated) {
-                    setHasAnimated(true);
-                    animateValue(0, value, duration);
+                if (entries[0].isIntersecting) {
+                    setIsVisible(true);
                 }
             },
             { threshold: 0.1 }
@@ -39,7 +40,17 @@ export default function AnimatedCounter({
         }
 
         return () => observer.disconnect();
-    }, [value, duration, hasAnimated]);
+    }, []);
+
+    // Anima quando se torna visível OU quando o valor muda
+    useEffect(() => {
+        if (isVisible) {
+            // Se o valor mudou, anima do valor atual para o novo
+            const startFrom = lastValue !== value ? displayValue : 0;
+            animateValue(startFrom, value, duration);
+            setLastValue(value);
+        }
+    }, [isVisible, value]);
 
     const animateValue = (start: number, end: number, duration: number) => {
         const startTime = performance.now();

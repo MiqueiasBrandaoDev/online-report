@@ -9,8 +9,8 @@
   --card-foreground: 210 40% 98%;
   --popover: 222.2 84% 4.9%;
   --popover-foreground: 210 40% 98%;
-  --primary: 210 40% 98%;
-  --primary-foreground: 222.2 47.4% 11.2%;
+  --primary: 142 71% 29%;
+  --primary-foreground: 0 0% 100%;
   --secondary: 217.2 32.6% 17.5%;
   --secondary-foreground: 210 40% 98%;
   --muted: 217.2 32.6% 17.5%;
@@ -21,7 +21,7 @@
   --destructive-foreground: 210 40% 98%;
   --border: 217.2 32.6% 17.5%;
   --input: 217.2 32.6% 17.5%;
-  --ring: 212.7 26.8% 83.9%;
+  --ring: 142 71% 29%;
   --chart-1: 220 70% 50%;
   --chart-2: 160 60% 45%;
   --chart-3: 30 80% 55%;
@@ -54,4 +54,109 @@ a {
   size: 1400px 2000px;
   margin: 0;
   background: #0d1117;
+}
+
+/* Loader 3D Cube Animation */
+:root {
+  --cube-color: #0000;
+  --highlight-color: #00cc44;
+}
+
+.wrapper-grid {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  perspective: 400px;
+  padding: 20px;
+}
+
+.cube {
+  width: 32px;
+  height: 32px;
+  position: relative;
+  transform-style: preserve-3d;
+  animation: translate-z 2s ease-in-out infinite;
+}
+
+.cube:nth-child(1) { animation-delay: 0s; }
+.cube:nth-child(2) { animation-delay: 0.1s; }
+.cube:nth-child(3) { animation-delay: 0.2s; }
+.cube:nth-child(4) { animation-delay: 0.3s; }
+.cube:nth-child(5) { animation-delay: 0.4s; }
+.cube:nth-child(6) { animation-delay: 0.5s; }
+.cube:nth-child(7) { animation-delay: 0.6s; }
+.cube:nth-child(8) { animation-delay: 0.7s; }
+.cube:nth-child(9) { animation-delay: 0.8s; }
+.cube:nth-child(10) { animation-delay: 0.9s; }
+
+.face {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: 700;
+  color: #fff0;
+  background-color: var(--cube-color);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  animation: face-color 2s ease-in-out infinite, face-glow 2s ease-in-out infinite, edge-glow 2s ease-in-out infinite;
+}
+
+.cube:nth-child(1) .face { animation-delay: 0s; }
+.cube:nth-child(2) .face { animation-delay: 0.1s; }
+.cube:nth-child(3) .face { animation-delay: 0.2s; }
+.cube:nth-child(4) .face { animation-delay: 0.3s; }
+.cube:nth-child(5) .face { animation-delay: 0.4s; }
+.cube:nth-child(6) .face { animation-delay: 0.5s; }
+.cube:nth-child(7) .face { animation-delay: 0.6s; }
+.cube:nth-child(8) .face { animation-delay: 0.7s; }
+.cube:nth-child(9) .face { animation-delay: 0.8s; }
+.cube:nth-child(10) .face { animation-delay: 0.9s; }
+
+.face-front  { transform: translateZ(16px); }
+.face-back   { transform: rotateY(180deg) translateZ(16px); }
+.face-right  { transform: rotateY(90deg) translateZ(16px); }
+.face-left   { transform: rotateY(-90deg) translateZ(16px); }
+.face-top    { transform: rotateX(90deg) translateZ(16px); }
+.face-bottom { transform: rotateX(-90deg) translateZ(16px); }
+
+@keyframes translate-z {
+  0%, 40%, 100% {
+    transform: translateZ(-2px);
+  }
+  30% {
+    transform: translateZ(16px) translateY(-1px);
+  }
+}
+
+@keyframes face-color {
+  0%, 50%, 100% {
+    background-color: var(--cube-color);
+  }
+  10% {
+    background-color: var(--highlight-color);
+  }
+}
+
+@keyframes face-glow {
+  0%, 50%, 100% {
+    color: #fff0;
+    filter: none;
+  }
+  30% {
+    color: #fff;
+    filter: drop-shadow(0 14px 10px var(--highlight-color));
+  }
+}
+
+@keyframes edge-glow {
+  0%, 40%, 100% {
+    box-shadow: inset 0 0 2px 1px #0001, inset 0 0 12px 1px #fff1;
+  }
+  30% {
+    box-shadow: 0 0 2px 0px var(--highlight-color);
+  }
 }

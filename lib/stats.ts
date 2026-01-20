@@ -1,5 +1,21 @@
 import { Conversation, ConversationDetails, ReportData, ProcessedSession } from './types';
 
+/**
+ * Calcula estatísticas a partir das conversas brutas da API ElevenLabs
+ *
+ * @param conversations - Lista de conversas da API (endpoint /conversations)
+ * @param detailsMap - Mapa com detalhes de cada conversa (endpoint /conversations/{id})
+ * @returns ReportData com estatísticas calculadas e dados brutos para filtragem
+ *
+ * @example
+ * ```ts
+ * const stats = calculateStats(conversations, detailsMap);
+ * // Acessar todas as sessões para filtragem:
+ * const sessoesHoje = stats.sessoes.filter(s =>
+ *   new Date(s.horario).toDateString() === new Date().toDateString()
+ * );
+ * ```
+ */
 export function calculateStats(
     conversations: Conversation[],
     detailsMap: Record<string, ConversationDetails>
@@ -8,22 +24,27 @@ export function calculateStats(
     const status_count: Record<string, number> = {};
     const duracoes: number[] = [];
     const mensagens: number[] = [];
+
+    // Array com TODAS as sessões (para filtragem no dashboard)
+    const sessoes: ProcessedSession[] = [];
+    // Array apenas com sucessos (mantido para compatibilidade)
     const sessoes_sucesso: ProcessedSession[] = [];
 
     conversations.forEach(conv => {
         const details = detailsMap[conv.conversation_id];
 
-        // Status
-        let status = "nao-atendida";
+        // Determina status baseado nos dados da API
+        let status: "bem-sucedido" | "nao-atendida" = "nao-atendida";
         if (conv.call_successful === "success" || conv.status === "done") {
             status = "bem-sucedido";
         }
-        // Override if details say otherwise (though API list is usually accurate on status)
-        if (details?.call_successful === "success") status = "bem-sucedido";
+        if (details?.call_successful === "success") {
+            status = "bem-sucedido";
+        }
 
         status_count[status] = (status_count[status] || 0) + 1;
 
-        // Duration
+        // Calcula duração priorizando dados mais precisos
         let duracao = 0;
         if (details?.metadata?.call_duration_secs) {
             duracao = details.metadata.call_duration_secs;
@@ -34,19 +55,24 @@ export function calculateStats(
         }
         duracoes.push(duracao);
 
-        // Messages
+        // Conta mensagens do transcript
         const num_msgs = details?.transcript?.length || 0;
         mensagens.push(num_msgs);
 
-        // Sucesso
+        // Cria objeto da sessão com todos os dados
+        const startTs = conv.start_time_unix_secs;
+        const horario = new Date(startTs * 1000).toISOString();
+        const sessao: ProcessedSession = {
+            horario,
+            duracao,
+            mensagens: num_msgs,
+            status
+        };
+
+        // Adiciona em ambos os arrays
+        sessoes.push(sessao);
         if (status === "bem-sucedido") {
-            const startTs = conv.start_time_unix_secs;
-            const horario = new Date(startTs * 1000).toISOString();
-            sessoes_sucesso.push({
-                horario,
-                duracao,
-                mensagens: num_msgs
-            });
+            sessoes_sucesso.push(sessao);
         }
     });
 
@@ -92,6 +118,7 @@ export function calculateStats(
         duracoes,
         mensagens,
         sessoes_sucesso,
+        sessoes, // Novo: todas as sessões para filtragem
         ligacoes_atendidas,
         ligacoes_nao_atendidas,
         ligacoes_mais_30s,
@@ -106,5 +133,90 @@ export function calculateStats(
         max_msgs,
         dist_msgs,
         picos
+    };
+}
+
+/**
+ * Recalcula estatísticas a partir de um subconjunto de sessões filtradas
+ *
+ * Use esta função para recalcular os valores quando o usuário aplica
+ * um filtro de data no dashboard.
+ *
+ * @param sessoes - Array de sessões já filtradas por data
+ * @returns Objeto com estatísticas recalculadas
+ *
+ * @example
+ * ```ts
+ * // No componente do dashboard:
+ * const sessoesNoRange = reportData.sessoes.filter(s => {
+ *   const d = new Date(s.horario);
+ *   return d >= startDate && d <= endDate;
+ * });
+ * const statsFiltered = recalculateFromSessions(sessoesNoRange);
+ * ```
+ */
+export function recalculateFromSessions(sessoes: ProcessedSession[]) {
+    const total = sessoes.length;
+    const sessoes_sucesso = sessoes.filter(s => s.status === "bem-sucedido");
+    const sessoes_nao_atendidas = sessoes.filter(s => s.status === "nao-atendida");
+
+    const duracoes = sessoes.map(s => s.duracao);
+    const mensagens = sessoes.map(s => s.mensagens);
+
+    const ligacoes_atendidas = sessoes_sucesso.length;
+    const ligacoes_nao_atendidas = sessoes_nao_atendidas.length;
+    const ligacoes_mais_30s = duracoes.filter(d => d > 30).length;
+
+    const taxa_atendimento = total > 0 ? (ligacoes_atendidas / total * 100) : 0;
+    const taxa_mais_30s = total > 0 ? (ligacoes_mais_30s / total * 100) : 0;
+
+    const duracao_total = duracoes.reduce((a, b) => a + b, 0);
+    const duracao_media = total > 0 ? duracao_total / total : 0;
+    const maior_duracao = duracoes.length > 0 ? Math.max(...duracoes) : 0;
+    const sessoes_zero = duracoes.filter(d => d === 0).length;
+
+    const total_mensagens = mensagens.reduce((a, b) => a + b, 0);
+    const msgs_sucesso = sessoes_sucesso.filter(s => s.mensagens > 0).map(s => s.mensagens);
+    const media_msgs = msgs_sucesso.length > 0
+        ? msgs_sucesso.reduce((a, b) => a + b, 0) / msgs_sucesso.length
+        : 0;
+    const max_msgs = mensagens.length > 0 ? Math.max(...mensagens) : 0;
+
+    // Distribuição de mensagens
+    const dist_msgs: Record<string, number> = {
+        "0": 0, "1-2": 0, "3-4": 0, "5-6": 0, "7-8": 0, "9+": 0
+    };
+    sessoes_sucesso.forEach(s => {
+        const m = s.mensagens;
+        if (m === 0) dist_msgs["0"]++;
+        else if (m <= 2) dist_msgs["1-2"]++;
+        else if (m <= 4) dist_msgs["3-4"]++;
+        else if (m <= 6) dist_msgs["5-6"]++;
+        else if (m <= 8) dist_msgs["7-8"]++;
+        else dist_msgs["9+"]++;
+    });
+
+    // Top 5 engajamentos
+    const picos = [...sessoes_sucesso]
+        .sort((a, b) => b.mensagens - a.mensagens)
+        .slice(0, 5);
+
+    return {
+        total,
+        ligacoes_atendidas,
+        ligacoes_nao_atendidas,
+        ligacoes_mais_30s,
+        taxa_atendimento,
+        taxa_mais_30s,
+        duracao_total,
+        duracao_media,
+        maior_duracao,
+        sessoes_zero,
+        total_mensagens,
+        media_msgs,
+        max_msgs,
+        dist_msgs,
+        picos,
+        sessoes_sucesso
     };
 }
