@@ -403,15 +403,24 @@ export default function TranscriptionsView({ sessoes }: TranscriptionsViewProps)
     }
 
     if (vendaFilter !== 'all') {
-        sessoesFiltradas = sessoesFiltradas.filter(s => s.resultado_venda === vendaFilter);
+        if (vendaFilter === 'recusado') {
+            // Incluir sessões com resultado_venda === 'recusado' OU sem resultado (null/undefined)
+            sessoesFiltradas = sessoesFiltradas.filter(s =>
+                s.resultado_venda === 'recusado' ||
+                s.resultado_venda === null ||
+                s.resultado_venda === undefined
+            );
+        } else {
+            sessoesFiltradas = sessoesFiltradas.filter(s => s.resultado_venda === vendaFilter);
+        }
     }
 
     // Aplica paginação após filtros
     const sessoesVisiveis = sessoesFiltradas.slice(0, visibleCount);
     const hasMore = visibleCount < sessoesFiltradas.length;
 
-    // Conta quantos têm resultado de venda para mostrar o filtro
-    const temResultadoVenda = sessoesOrdenadas.some(s => s.resultado_venda);
+    // Mostra o filtro de vendas se houver sessões bem-sucedidas
+    const temSessoesBemSucedidas = sessoesOrdenadas.some(s => s.status === 'bem-sucedido');
 
     return (
         <div className={styles.transcriptionsContainer}>
@@ -439,7 +448,7 @@ export default function TranscriptionsView({ sessoes }: TranscriptionsViewProps)
                             <option value="bem-sucedido">Bem-sucedidas</option>
                             <option value="nao-atendida">Não atendidas</option>
                         </select>
-                        {temResultadoVenda && (
+                        {temSessoesBemSucedidas && (
                             <select
                                 value={vendaFilter}
                                 onChange={(e) => setVendaFilter(e.target.value as any)}
