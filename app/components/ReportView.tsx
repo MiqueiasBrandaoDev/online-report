@@ -9,6 +9,7 @@ import DateRangeFilter from './DateRangeFilter';
 import Tabs, { TabType } from './Tabs';
 import TranscriptionsView from './TranscriptionsView';
 import { recalculateFromSessions } from '@/lib/stats';
+import { BackgroundPlus } from '@/components/ui/background-plus';
 
 interface ReportViewProps {
     data: ReportData;
@@ -114,6 +115,11 @@ export default function ReportView({ data, startDate }: ReportViewProps) {
 
     return (
         <div className={styles.wrapper}>
+            <BackgroundPlus
+                plusColor="#238636"
+                plusSize={50}
+                className="opacity-30"
+            />
             <div className={styles.container}>
                 {/* Header with Tabs */}
                 <header className={styles.header}>
