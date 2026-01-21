@@ -395,6 +395,9 @@ export default function TranscriptionsView({ sessoes }: TranscriptionsViewProps)
     // Filtro por resultado da venda
     const [vendaFilter, setVendaFilter] = useState<'all' | 'aceito' | 'recusado'>('all');
 
+    // Filtro por duração mínima (em segundos)
+    const [duracaoMinima, setDuracaoMinima] = useState<string>('');
+
     // Aplica filtros
     let sessoesFiltradas = sessoesOrdenadas;
 
@@ -413,6 +416,12 @@ export default function TranscriptionsView({ sessoes }: TranscriptionsViewProps)
         } else {
             sessoesFiltradas = sessoesFiltradas.filter(s => s.resultado_venda === vendaFilter);
         }
+    }
+
+    // Filtro por duração mínima
+    const duracaoMinimaNum = parseInt(duracaoMinima, 10);
+    if (!isNaN(duracaoMinimaNum) && duracaoMinimaNum > 0) {
+        sessoesFiltradas = sessoesFiltradas.filter(s => s.duracao >= duracaoMinimaNum);
     }
 
     // Aplica paginação após filtros
@@ -467,6 +476,26 @@ export default function TranscriptionsView({ sessoes }: TranscriptionsViewProps)
                                 <option value="recusado">Vendas Recusadas</option>
                             </select>
                         )}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span style={{ fontSize: '12px', color: '#8b949e' }}>Min:</span>
+                            <input
+                                type="number"
+                                value={duracaoMinima}
+                                onChange={(e) => setDuracaoMinima(e.target.value)}
+                                placeholder="seg"
+                                min="0"
+                                style={{
+                                    width: '60px',
+                                    background: 'rgba(13, 17, 23, 0.6)',
+                                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                                    borderRadius: '6px',
+                                    color: '#e6edf3',
+                                    padding: '6px 8px',
+                                    fontSize: '12px'
+                                }}
+                            />
+                            <span style={{ fontSize: '11px', color: '#8b949e' }}>seg</span>
+                        </div>
                         <span style={{ fontSize: '13px', color: '#8b949e' }}>
                             {sessoesFiltradas.length} registros
                         </span>
