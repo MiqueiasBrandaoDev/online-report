@@ -14,6 +14,7 @@ import { BackgroundPlus } from '@/components/ui/background-plus';
 interface ReportViewProps {
     data: ReportData;
     startDate: string;
+    onDataUpdate?: () => void;
 }
 
 /**
@@ -23,7 +24,7 @@ interface ReportViewProps {
  * Quando um filtro é aplicado, as estatísticas são recalculadas
  * usando apenas as sessões dentro do range selecionado.
  */
-export default function ReportView({ data, startDate }: ReportViewProps) {
+export default function ReportView({ data, startDate, onDataUpdate }: ReportViewProps) {
     // Estado para dados filtrados (null = sem filtro ativo)
     const [filteredData, setFilteredData] = useState<ReturnType<typeof recalculateFromSessions> | null>(null);
     const [filteredSessoes, setFilteredSessoes] = useState<ProcessedSession[] | null>(null);
@@ -425,7 +426,7 @@ export default function ReportView({ data, startDate }: ReportViewProps) {
                         </div>
                     </>
                 ) : (
-                    <TranscriptionsView sessoes={filteredSessoes || data.sessoes || []} />
+                    <TranscriptionsView sessoes={filteredSessoes || data.sessoes || []} onConversationDeleted={onDataUpdate} />
                 )}
 
                 {/* Footer */}

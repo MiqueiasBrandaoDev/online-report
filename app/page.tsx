@@ -90,6 +90,21 @@ export default function Home() {
     setShowModal(true);
   };
 
+  // Recarrega os dados do relatório após uma conversa ser deletada
+  const handleDataUpdate = async () => {
+    try {
+      const res = await fetch('/api/report');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.exists !== false) {
+          setReportData(data);
+        }
+      }
+    } catch (err) {
+      console.error('Error reloading report:', err);
+    }
+  };
+
   // Mostra loading enquanto verifica senha salva
   if (checkingStoredAuth) {
     return (
@@ -148,7 +163,7 @@ export default function Home() {
   if (reportData) {
     return (
       <div>
-        <ReportView data={reportData} startDate={reportData.periodo_inicio || 'N/A'} />
+        <ReportView data={reportData} startDate={reportData.periodo_inicio || 'N/A'} onDataUpdate={handleDataUpdate} />
 
         {/* Card de Faltam Ligar */}
         <FaltamLigarCard />

@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import styles from '../Report.module.css';
 import { ProcessedSession } from '@/lib/types';
+import DeleteConfirmModal from './DeleteConfirmModal';
 
 interface TranscriptMessage {
     role: 'user' | 'agent';
@@ -36,6 +37,7 @@ interface ConversationDetails {
 
 interface TranscriptionsViewProps {
     sessoes: ProcessedSession[];
+    onConversationDeleted?: () => void;
 }
 
 function formatDuration(seconds: number): string {
@@ -129,7 +131,12 @@ function extractCustomerData(details: ConversationDetails | null): {
     return { nome, telefone, resultado };
 }
 
-function TranscriptionCard({ sessao }: { sessao: ProcessedSession }) {
+interface TranscriptionCardProps {
+    sessao: ProcessedSession;
+    onDeleteClick: (conversationId: string, phoneNumber?: string) => void;
+}
+
+function TranscriptionCard({ sessao, onDeleteClick }: TranscriptionCardProps) {
     const [isExpanded, setIsExpanded] = useState(false);
     const [details, setDetails] = useState<ConversationDetails | null>(null);
     const [loading, setLoading] = useState(false);
@@ -221,10 +228,27 @@ function TranscriptionCard({ sessao }: { sessao: ProcessedSession }) {
                         </span>
                     </div>
                 </div>
-                <div className={`${styles.transcriptionExpand} ${isExpanded ? styles.expanded : ''}`}>
-                    <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
-                        <path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/>
-                    </svg>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    {/* Botão de deletar */}
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            if (sessao.conversation_id) {
+                                onDeleteClick(sessao.conversation_id, customerData.telefone);
+                            }
+                        }}
+                        className={styles.deleteButton}
+                        title="Deletar conversa"
+                    >
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                            <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+                        </svg>
+                    </button>
+                    <div className={`${styles.transcriptionExpand} ${isExpanded ? styles.expanded : ''}`}>
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                            <path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/>
+                        </svg>
+                    </div>
                 </div>
             </div>
 
@@ -375,11 +399,17 @@ function TranscriptionCard({ sessao }: { sessao: ProcessedSession }) {
     );
 }
 
-export default function TranscriptionsView({ sessoes }: TranscriptionsViewProps) {
+export default function TranscriptionsView({ sessoes, onConversationDeleted }: TranscriptionsViewProps) {
     // Ordena por data mais recente e filtra apenas conversas com ID
-    const sessoesOrdenadas = [...sessoes]
+    const [localSessoes, setLocalSessoes] = useState(sessoes);
+    const sessoesOrdenadas = [...localSessoes]
         .filter(s => s.conversation_id)
         .sort((a, b) => new Date(b.horario).getTime() - new Date(a.horario).getTime());
+
+    // Atualiza sessões locais quando as props mudam
+    useEffect(() => {
+        setLocalSessoes(sessoes);
+    }, [sessoes]);
 
     // Paginação: mostra 20 por vez
     const [visibleCount, setVisibleCount] = useState(20);
@@ -387,7 +417,7 @@ export default function TranscriptionsView({ sessoes }: TranscriptionsViewProps)
     // Reseta paginação quando as sessões mudam (ex: filtro aplicado/removido)
     useEffect(() => {
         setVisibleCount(20);
-    }, [sessoes]);
+    }, [localSessoes]);
 
     // Filtro por status de ligação
     const [statusFilter, setStatusFilter] = useState<'all' | 'bem-sucedido' | 'nao-atendida'>('all');
@@ -397,6 +427,42 @@ export default function TranscriptionsView({ sessoes }: TranscriptionsViewProps)
 
     // Filtro por duração mínima (em segundos)
     const [duracaoMinima, setDuracaoMinima] = useState<string>('');
+
+    // Estado do modal de delete
+    const [deleteModal, setDeleteModal] = useState<{
+        isOpen: boolean;
+        conversationId: string;
+        phoneNumber?: string;
+    }>({
+        isOpen: false,
+        conversationId: '',
+        phoneNumber: undefined
+    });
+
+    const handleDeleteClick = (conversationId: string, phoneNumber?: string) => {
+        setDeleteModal({
+            isOpen: true,
+            conversationId,
+            phoneNumber
+        });
+    };
+
+    const handleDeleteClose = () => {
+        setDeleteModal({
+            isOpen: false,
+            conversationId: '',
+            phoneNumber: undefined
+        });
+    };
+
+    const handleDeleted = (conversationId: string) => {
+        // Remove a sessão deletada da lista local
+        setLocalSessoes(prev => prev.filter(s => s.conversation_id !== conversationId));
+        // Notifica o componente pai para recarregar os dados do relatório
+        if (onConversationDeleted) {
+            onConversationDeleted();
+        }
+    };
 
     // Aplica filtros
     let sessoesFiltradas = sessoesOrdenadas;
@@ -517,7 +583,11 @@ export default function TranscriptionsView({ sessoes }: TranscriptionsViewProps)
                     ) : (
                         <>
                             {sessoesVisiveis.map(sessao => (
-                                <TranscriptionCard key={sessao.conversation_id} sessao={sessao} />
+                                <TranscriptionCard
+                                    key={sessao.conversation_id}
+                                    sessao={sessao}
+                                    onDeleteClick={handleDeleteClick}
+                                />
                             ))}
 
                             {hasMore && (
@@ -549,6 +619,15 @@ export default function TranscriptionsView({ sessoes }: TranscriptionsViewProps)
                     )}
                 </div>
             </div>
+
+            {/* Modal de confirmação de delete */}
+            <DeleteConfirmModal
+                isOpen={deleteModal.isOpen}
+                conversationId={deleteModal.conversationId}
+                phoneNumber={deleteModal.phoneNumber}
+                onClose={handleDeleteClose}
+                onDeleted={handleDeleted}
+            />
         </div>
     );
 }

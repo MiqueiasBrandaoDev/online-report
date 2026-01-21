@@ -3,6 +3,9 @@ import { Conversation, ConversationDetails, ReportData, ProcessedSession } from 
 /**
  * Calcula estatísticas a partir das conversas brutas da API ElevenLabs
  *
+ * NOTA: A filtragem de números de teste (whitelist) é feita no GenerateReportModal
+ * antes de chamar esta função, garantindo que conversas de teste nem sejam baixadas.
+ *
  * @param conversations - Lista de conversas da API (endpoint /conversations)
  * @param detailsMap - Mapa com detalhes de cada conversa (endpoint /conversations/{id})
  * @returns ReportData com estatísticas calculadas e dados brutos para filtragem

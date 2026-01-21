@@ -45,6 +45,27 @@ export default function GenerateReportModal({ onClose, onReportGenerated }: Gene
                 ? Math.floor(new Date(endDate + 'T23:59:59').getTime() / 1000)
                 : Math.floor(Date.now() / 1000);
 
+            // 0. Busca whitelist de telefones a ignorar
+            let whitelistPhones: string[] = [];
+            try {
+                const wlRes = await fetch('/api/whitelist');
+                if (wlRes.ok) {
+                    const wlData = await wlRes.json();
+                    whitelistPhones = wlData.phones || [];
+                }
+            } catch {
+                // Ignora erro da whitelist
+            }
+
+            // Função para verificar se telefone está na whitelist
+            const normalizePhone = (phone: string | undefined) => phone ? phone.replace(/\D/g, '') : '';
+            const isPhoneWhitelisted = (phone: string | undefined) => {
+                if (whitelistPhones.length === 0) return false;
+                const normalized = normalizePhone(phone);
+                if (!normalized) return false;
+                return whitelistPhones.some(wp => normalized.includes(wp) || wp.includes(normalized));
+            };
+
             // 1. Fetch List - busca conversas a partir de startDate
             const listRes = await fetch(`/api/conversations?start=${startUnix}`);
             if (!listRes.ok) {
@@ -54,7 +75,7 @@ export default function GenerateReportModal({ onClose, onReportGenerated }: Gene
             const listData = await listRes.json();
 
             // Filtra conversas que estão dentro do range [startUnix, endUnix]
-            const conversations = listData.conversations.filter((conv: any) =>
+            let conversations = listData.conversations.filter((conv: any) =>
                 conv.start_time_unix_secs >= startUnix &&
                 conv.start_time_unix_secs <= endUnix
             );
@@ -72,13 +93,25 @@ export default function GenerateReportModal({ onClose, onReportGenerated }: Gene
             const ids = conversations.map((c: any) => c.conversation_id);
 
             let completed = 0;
+            let ignoredCount = 0;
 
             const fetchDetail = async (id: string, retries = 3) => {
                 try {
                     const res = await fetch(`/api/conversation/${id}`);
                     if (res.ok) {
                         const data = await res.json();
-                        detailsMap[id] = data;
+
+                        // Verifica se o telefone está na whitelist
+                        const phone = data?.metadata?.phone_call?.external_number
+                            || data?.metadata?.phone_call?.from_number;
+
+                        if (isPhoneWhitelisted(phone)) {
+                            console.log(`[Whitelist] Ignorando conversa ${id} - telefone: ${phone}`);
+                            ignoredCount++;
+                            // Não adiciona ao detailsMap
+                        } else {
+                            detailsMap[id] = data;
+                        }
                     } else if (res.status === 429 && retries > 0) {
                         const waitTime = (4 - retries) * 1000;
                         console.log(`Rate limit hit for ${id}, retrying in ${waitTime}ms...`);
@@ -98,6 +131,13 @@ export default function GenerateReportModal({ onClose, onReportGenerated }: Gene
             for (let i = 0; i < ids.length; i += CONCURRENT_LIMIT) {
                 const batch = ids.slice(i, i + CONCURRENT_LIMIT);
                 await Promise.all(batch.map((id: string) => fetchDetail(id)));
+            }
+
+            // Filtra conversas que não estão no detailsMap (foram ignoradas pela whitelist)
+            conversations = conversations.filter((conv: any) => detailsMap[conv.conversation_id]);
+
+            if (ignoredCount > 0) {
+                console.log(`[Whitelist] ${ignoredCount} conversas de teste ignoradas`);
             }
 
             // 3. Calculate Stats
