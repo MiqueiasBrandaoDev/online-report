@@ -8,15 +8,48 @@ import FaltamLigarCard from './components/FaltamLigarCard';
 import { ReportData } from '@/lib/types';
 import { checkPassword } from './actions';
 
+const STORAGE_KEY = 'report_access_token';
+
 export default function Home() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [reportData, setReportData] = useState<ReportData | null>(null);
   const [loading, setLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
+  const [checkingStoredAuth, setCheckingStoredAuth] = useState(true);
+
+  // Verifica se há senha salva no LocalStorage ao carregar
+  useEffect(() => {
+    const checkStoredPassword = async () => {
+      try {
+        const storedPassword = localStorage.getItem(STORAGE_KEY);
+        if (storedPassword) {
+          const isValid = await checkPassword(storedPassword);
+          if (isValid) {
+            setIsAuthenticated(true);
+            loadExistingReport();
+          } else {
+            // Senha salva não é mais válida, remove do storage
+            localStorage.removeItem(STORAGE_KEY);
+          }
+        }
+      } catch {
+        // LocalStorage não disponível (SSR ou privado)
+      }
+      setCheckingStoredAuth(false);
+    };
+
+    checkStoredPassword();
+  }, []);
 
   const handleLogin = async (pwd: string) => {
     const isValid = await checkPassword(pwd);
     if (isValid) {
+      // Salva a senha no LocalStorage para próximos acessos
+      try {
+        localStorage.setItem(STORAGE_KEY, pwd);
+      } catch {
+        // LocalStorage não disponível
+      }
       setIsAuthenticated(true);
       // Load existing report after successful login
       loadExistingReport();
@@ -56,6 +89,32 @@ export default function Home() {
   const handleGenerateNew = () => {
     setShowModal(true);
   };
+
+  // Mostra loading enquanto verifica senha salva
+  if (checkingStoredAuth) {
+    return (
+      <main style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0d1117', color: '#e6edf3' }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{
+            width: '50px',
+            height: '50px',
+            border: '4px solid #30363d',
+            borderTop: '4px solid #238636',
+            borderRadius: '50%',
+            animation: 'spin 1s linear infinite',
+            margin: '0 auto 20px'
+          }}></div>
+          <p style={{ color: '#8b949e' }}>Verificando acesso...</p>
+        </div>
+        <style jsx>{`
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+        `}</style>
+      </main>
+    );
+  }
 
   if (!isAuthenticated) {
     return <Login onLogin={handleLogin} />;
