@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { promises as fs } from 'fs';
 import path from 'path';
+import { translateToPortuguese } from '@/lib/translate';
 
 const API_KEY = process.env.ELEVENLABS_API_KEY;
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "admin456";
@@ -8,11 +9,12 @@ const BASE_URL = process.env.ELEVENLABS_API_URL || "https://api.elevenlabs.io/v1
 const REPORT_FILE = path.join(process.cwd(), 'data', 'latest-report.json');
 
 export async function GET(request: Request, { params }: { params: any }) {
-    // Await params in newer Next.js versions if needed, but for now treating as sync or awaited
-    // pending framework update. In Next 15 params is a promise?
-    // Safe way:
     const resolvedParams = await params;
     const conversationId = resolvedParams.id;
+
+    // Verifica se deve traduzir o resumo (apenas quando abre detalhes da ligação)
+    const { searchParams } = new URL(request.url);
+    const shouldTranslate = searchParams.get('translate') === 'true';
 
     if (!conversationId) {
         return NextResponse.json({ error: 'Missing conversation ID' }, { status: 400 });
@@ -27,8 +29,6 @@ export async function GET(request: Request, { params }: { params: any }) {
         });
 
         if (!res.ok) {
-            // If 404 or other, return null or error? Python script catches exception and passes.
-            // We'll return 404 or empty structure.
             if (res.status === 404) {
                 return NextResponse.json({ error: 'Not found' }, { status: 404 });
             }
@@ -41,6 +41,12 @@ export async function GET(request: Request, { params }: { params: any }) {
         }
 
         const data = await res.json();
+
+        // Traduz o resumo para português apenas se solicitado
+        if (shouldTranslate && data.analysis?.transcript_summary) {
+            data.analysis.transcript_summary = await translateToPortuguese(data.analysis.transcript_summary);
+        }
+
         return NextResponse.json(data);
 
     } catch (error: any) {

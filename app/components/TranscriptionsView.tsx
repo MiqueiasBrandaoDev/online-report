@@ -149,7 +149,7 @@ function TranscriptionCard({ sessao, onDeleteClick }: TranscriptionCardProps) {
         setError(null);
 
         try {
-            const res = await fetch(`/api/conversation/${sessao.conversation_id}`);
+            const res = await fetch(`/api/conversation/${sessao.conversation_id}?translate=true`);
             if (!res.ok) {
                 throw new Error('Falha ao carregar detalhes');
             }
