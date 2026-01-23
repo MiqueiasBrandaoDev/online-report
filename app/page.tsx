@@ -44,6 +44,9 @@ export default function Home() {
   const handleLogin = async (pwd: string) => {
     const isValid = await checkPassword(pwd);
     if (isValid) {
+      // Registra o login (data + IP)
+      fetch('/api/login-logs', { method: 'POST' }).catch(() => {});
+
       // Salva a senha no LocalStorage para próximos acessos
       try {
         localStorage.setItem(STORAGE_KEY, pwd);
